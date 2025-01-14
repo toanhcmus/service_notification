@@ -1,7 +1,6 @@
 const express = require('express');
 const {
   createNotification,
-  markNotificationAsRead,
 } = require('../controllers/notificationController');
 
 const router = express.Router();

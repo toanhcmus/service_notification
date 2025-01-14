@@ -1,8 +1,25 @@
 const WebSocket = require('ws');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
-
 const activeConnections = new Map();
+const axios = require('axios');
+
+const checkUserExist = async (userId, username) => {
+  try {
+    const requestBody = {};
+    if (userId) {
+      requestBody.userId = userId;
+    } else if (username) {
+      requestBody.username = username;
+    }
+
+    const response = await axios.post('http://localhost:1001/auth/checkexist', requestBody);
+    return response.data.exist;
+  } catch (error) {
+    console.error('Error checking user existence:', error.message);
+    throw new Error('Failed to check user existence');
+  }
+};
 
 const notificationWebSocket = (server) => {
   const wss = new WebSocket.Server({ server });
@@ -17,11 +34,12 @@ const notificationWebSocket = (server) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const userId = decoded.id;
+      const userId = decoded.userId;
       console.log(userId);
 
-      const userExists = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
-      if (userExists.rows.length === 0) {
+      // Kiểm tra user tồn tại qua API
+      const userExists = await checkUserExist(userId, null);
+      if (!userExists) {
         ws.close(4001, 'User not found');
         return;
       }
